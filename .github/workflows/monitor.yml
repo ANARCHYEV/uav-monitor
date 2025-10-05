@@ -1,0 +1,58 @@
+name: UAV Threat Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout код
+        uses: actions/checkout@v3
+      
+      - name: Встановити Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Кешування залежностей
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+      
+      - name: Встановити залежності
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Запуск моніторингу
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
+          ADMIN_TELEGRAM_ID: ${{ secrets.ADMIN_TELEGRAM_ID }}
+        run: |
+          # Запуск на 4 хвилини (GitHub Actions обмеження)
+          timeout 240 python main.py || true
+      
+      - name: Зберегти логи
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: alerts-log
+          path: alerts_log.json
+          retention-days: 7
+      
+      - name: Commit оновлених логів
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add alerts_log.json || true
+          git commit -m "📊 Update alerts log $(date)" || true
+          git push || true
