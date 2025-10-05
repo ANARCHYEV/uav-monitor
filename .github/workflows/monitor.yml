@@ -3,7 +3,6 @@ name: UAV Threat Monitor
 on:
   schedule:
     - cron: '*/5 * * * *'
-
   workflow_dispatch:
 
 jobs:
@@ -37,12 +36,11 @@ jobs:
           TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
           ADMIN_TELEGRAM_ID: ${{ secrets.ADMIN_TELEGRAM_ID }}
         run: |
-          # Запуск на 4 хвилини (GitHub Actions обмеження)
           timeout 240 python main.py || true
       
       - name: Зберегти логи
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: alerts-log
           path: alerts_log.json
@@ -54,5 +52,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add alerts_log.json || true
-          git commit -m "📊 Update alerts log $(date)" || true
+          git diff --quiet && echo "No changes in logs" || git commit -m "📊 Update alerts log $(date)" 
           git push || true
